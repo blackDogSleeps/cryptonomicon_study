@@ -16,6 +16,7 @@
           <div class="mt-1 relative rounded-md shadow-md">
             <input
               @keydown.enter="add"
+              @keyup="getTicker"
               v-model="ticker"
               type="text"
               name="wallet"
@@ -24,8 +25,16 @@
               placeholder="Например DOGE"
             />
           </div>
-          <div class="flex bg-white shadow-md p-1 rounded-md shadow-md flex-wrap">
-            <span class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer">
+          <div
+            v-if="tickersShow.length > 0"
+            class="flex bg-white shadow-md p-1 rounded-md shadow-md flex-wrap">
+            <span
+              @click="fillInput(item)"
+              v-for="item in tickersShow"
+              :key="item"
+              class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer">{{ item }}
+            </span>
+            <!-- <span class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer">
               BTC
             </span>
             <span class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer">
@@ -36,9 +45,11 @@
             </span>
             <span class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer">
               CHD
-            </span>
+            </span> -->
           </div>
-          <div class="text-sm text-red-600">Такой тикер уже добавлен</div>
+          <div 
+            v-if="tickerExists"
+            class="text-sm text-red-600">Такой тикер уже добавлен</div>
         </div>
       </div>
       <button
@@ -159,12 +170,48 @@ export default {
     return {
       ticker: '',
       tickers: [],
+      tickersList: {},
+      tickersShow: [],
+      tickerExists: false,
       sel: null,
       graph: []
     };
   },
 
+  mounted() {
+    (async () => {
+      let response = await fetch(
+        'https://min-api.cryptocompare.com/data/all/coinlist?summary=true');
+      let res = await response.json();
+      this.tickersList = res.Data;
+    })();
+  },
+
+  created() {
+    const tickersData = localStorage.getItem('cryptonomicon-list');
+
+    if (tickersData) {
+      this.tickers = JSON.parse(tickersData);
+      this.tickers.forEach(item => this.subscribeToUpdates(item.name));
+    }
+  },
+
   methods: {
+    subscribeToUpdates(tickerName) {
+      setInterval(async() => {
+        const f = await fetch(
+          `https://min-api.cryptocompare.com/data/price?fsym=${tickerName}&tsyms=USD&api_key=2f1fe6fd611453ad954f8cd4a8bd3a588399c2afb8ffb7bc94af4473c6f166d3`);
+        const data = await f.json();
+
+        this.tickers.find(t => t.name === tickerName).price = 
+          data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2);
+
+        if (this.sel?.name === tickerName) {
+          this.graph.push(data.USD);
+        }
+      }, 5000);
+    },
+
     add() {
       const currentTicker = {
         name: this.ticker,
@@ -172,19 +219,41 @@ export default {
       };
 
       this.tickers.push(currentTicker);
-      setInterval(async() => {
-        const f = await fetch(
-          `https://min-api.cryptocompare.com/data/price?fsym=${currentTicker.name}&tsyms=USD&api_key=2f1fe6fd611453ad954f8cd4a8bd3a588399c2afb8ffb7bc94af4473c6f166d3`);
-        const data = await f.json();
-
-        this.tickers.find(t => t.name === currentTicker.name).price = 
-          data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2);
-
-        if (this.sel?.name === currentTicker.name) {
-          this.graph.push(data.USD);
-        }
-      }, 5000);
+      
+      localStorage.setItem('cryptonomicon-list', JSON.stringify(this.tickers));
+      
+      this.subscribeToUpdates(currentTicker.name);
       this.ticker = '';
+    },
+
+    getTicker() {
+      let key = this.ticker.toUpperCase();
+
+      if (key != '') {
+        this.tickersShow = Object.keys(
+          this.tickersList).filter(item => item.includes(key));
+      } else {
+        this.tickersShow = {};
+      }
+    },
+
+    tickerExistsFunc() {
+      for (let i of this.tickers) {
+        console.log(i.name, this.ticker);
+
+        if (i.name === this.ticker) {
+          this.tickerExists = true;
+          return;
+        }
+      }
+      this.tickerExists = false;
+    },
+
+    fillInput(item) {
+      console.log(item);
+      this.ticker = item;
+      this.tickersShow = {};
+      this.tickerExistsFunc();
     },
 
     select(ticker) {
