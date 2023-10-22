@@ -16,7 +16,9 @@
       Вперед
     </button>
   </div>
-  <div>Фильтр: <input v-model="filter" /></div>
+  <ticker-filter
+    @addFilter="(f) => { filter = f; }"
+  />
   <hr class="w-full border-t border-gray-600 my-4" />
   <dl class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-3">
     <div
@@ -62,7 +64,12 @@
 </template>
 
 <script>
+import TickerFilter from './TickerFilter.vue';
 export default {
+  components: {
+    TickerFilter
+  },
+
   emits: ['selectTicker'],
 
   inject: [
