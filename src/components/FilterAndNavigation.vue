@@ -70,7 +70,9 @@ export default {
     TickerFilter
   },
 
-  emits: ['selectTicker'],
+  emits: {
+    selectTicker: null,
+  },
 
   inject: [
     'handleDelete',

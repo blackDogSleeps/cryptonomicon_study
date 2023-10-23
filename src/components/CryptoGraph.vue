@@ -47,6 +47,8 @@ export default {
     'normalizedGraph', 
     'selectedTicker'],
 
-  emits: ['closeGraph'],
+  emits: {
+    closeGraph: null,
+  },
 };
 </script>

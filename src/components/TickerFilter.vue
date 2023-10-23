@@ -11,9 +11,9 @@ export default {
     }
   },
 
-  emits: [
-    'addFilter',
-  ],
+  emits: {
+    addFilter: null,
+  },
 
   watch: {
     filter() {
