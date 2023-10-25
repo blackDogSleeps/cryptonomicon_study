@@ -54,6 +54,16 @@ function unsubscribeFromTickerOnWs(ticker) {
   });
 }
 
+
+export const tickerExistsFunc = (currentTickerName, tickers) => {
+  for (let i of tickers) {
+    if (i.name === currentTickerName.toUpperCase()) {
+      return true;
+    }
+  }
+  return false;
+};
+
 export const subscribeToTicker = (ticker, cb) => {
   const subscribers = tickersHandlers.get(ticker) || [];
   tickersHandlers.set(ticker, [...subscribers, cb]);
@@ -65,20 +75,3 @@ export const unsubscribeFromTicker = (ticker) => {
   unsubscribeFromTickerOnWs(ticker);
 };
 
-window.tickers = tickersHandlers;
-
-// TODO: refactor to use URLSearchParams
-// export const loadTickers = tickers =>
-//   fetch(
-//     `https://min-api.cryptocompare.com/data/pricemulti?fsyms=${tickersHandlers.join(
-//       ','
-//     )}&tsyms=USD&api_key=${API_KEY}`
-//   )
-//     .then(r => r.json())
-//     .then(rawData =>
-//       Object.fromEntries(
-//         Object.entries(rawData).map(([key, value]) => [key, value.USD])
-//       )
-//     );
-
-// window.tickers = tickersHandlers;

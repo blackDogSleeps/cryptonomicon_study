@@ -1,11 +1,12 @@
 <template>
+  <!-- {{ selectedTicker.graph }} -->
   <section v-if="selectedTicker" class="relative">
     <h3 class="text-lg leading-6 font-medium text-gray-900 my-8">
       {{ selectedTicker.name }} - USD
     </h3>
     <div class="flex items-end border-gray-600 border-b border-l h-64">
       <div
-        v-for="(bar, index) in normalizedGraph"
+        v-for="(bar, index) in normalizedGraph()"
         :key="index"
         :style="{ height: `${bar}%` }"
         class="bg-purple-800 border w-10"
@@ -43,12 +44,30 @@
 
 <script>
 export default {
-  inject: [
-    'normalizedGraph', 
-    'selectedTicker'],
-
   emits: {
     closeGraph: null,
+  },
+
+  props: {
+    selectedTicker: {
+      name: String,
+      price: Number,
+      graph: Array
+    }
+  },
+
+  methods: {
+    normalizedGraph() {
+      const maxValue = Math.max(...this.selectedTicker.graph);
+      const minValue = Math.min(...this.selectedTicker.graph);
+
+      if (minValue === maxValue) {
+        return this.selectedTicker.graph.map(() => 50);
+      }
+      return this.selectedTicker.graph.map(
+        (price) => 5 + ((price - minValue) * 95) / (maxValue - minValue),
+      );
+    },
   },
 };
 </script>

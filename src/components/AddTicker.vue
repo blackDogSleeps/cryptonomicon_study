@@ -44,10 +44,16 @@
 
 <script>
 import AddButton from "./AddButton.vue";
+import { tickerExistsFunc } from "../api";
 
 export default {
   components: {
     AddButton,
+  },
+
+  emits: {
+    switchTickerExists: null,
+    addTicker: Object
   },
 
   props: {
@@ -56,12 +62,15 @@ export default {
       required: false,
       default: false,
     },
-  },
 
-  inject: [
-    'tickerExists',
-    'tickerExistsFunc'
-  ],
+    tickers: {
+      type: Array,
+    }, 
+
+    tickerExists: {
+      type: Boolean,
+    },
+  },
 
   data() {
     return {
@@ -102,8 +111,11 @@ export default {
     fillInput(item) {
       this.ticker = item;
       this.tickersShow = {};
-      this.tickerExistsFunc(item);
+      this.$emit(
+        'switchTickerExists', 
+        tickerExistsFunc(item, this.tickers)
+      );
     },
-  },
+  }
 };
 </script>

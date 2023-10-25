@@ -8,14 +8,22 @@
   </div> -->
     <div class="container" ref="container">
       <add-ticker
-        @add-ticker="add" 
-        :disabled="tooManyTickersAdded" 
+        @switchTickerExists="(value) => { tickerExists = value; }"
+        @add-ticker="add"
+        :disabled="tooManyTickersAdded"
+        :tickers="tickers"
+        :tickerExists="tickerExists" 
       />
       <filter-and-navigation
-        v-if="tickers.length > 0"
+        :tickers="tickers"
+        :selectedTicker="selectedTicker"
+        @nullifyTicker="(t) => { selectedTicker = t; }"
+        @removeFromTickers="(tickerToRemove) => {
+          tickers = tickers.filter((x) => x !== tickerToRemove);}"
         @selectTicker="(t) => { select(t); }"
       />
       <crypto-graph
+        :selectedTicker="selectedTicker"
         @close-graph="(x) => { selectedTicker = x; }"
       />
     </div>
@@ -24,8 +32,8 @@
 
 <script>
 // DOGE, BTC, XMR, ZEC, ETH, MTH, XVG, LTC, FTC, DASH, ZET
-import { computed } from "vue";
-import { subscribeToTicker, unsubscribeFromTicker } from "./api";
+// eslint-disable-next-line no-unused-vars
+import { subscribeToTicker, tickerExistsFunc } from "./api";
 import AddTicker from "./components/AddTicker.vue";
 import CryptoGraph from "./components/CryptoGraph.vue";
 import FilterAndNavigation from  './components/FilterAndNavigation.vue';
@@ -45,7 +53,6 @@ export default {
       tickerExists: false,
       maxTickersAmount: 17,
       selectedTicker: null,
-      graph: [],
       maxGraphElements: 1,
       getGraph: undefined,
       graphColumnWidth: 40,
@@ -87,31 +94,7 @@ export default {
     setInterval(this.updateTicker, 500);
   },
 
-  provide() {
-    return {
-      normalizedGraph: computed(() => this.normalizedGraph),
-      selectedTicker: computed(() => this.selectedTicker),
-      tickers: computed(() => this.tickers),
-      tickerExists: computed(() => this.tickerExists),
-      tickerExistsFunc: computed(() => this.tickerExistsFunc),
-      handleDelete: computed(() => this.handleDelete),
-    };
-  },
-
   computed: {
-    normalizedGraph() {
-      const maxValue = Math.max(...this.graph);
-      const minValue = Math.min(...this.graph);
-
-      if (minValue === maxValue) {
-        return this.graph.map(() => 50);
-      }
-
-      return this.graph.map(
-        (price) => 5 + ((price - minValue) * 95) / (maxValue - minValue),
-      );
-    },
-
     tooManyTickersAdded() {
       return this.tickers.length > this.maxTickersAmount;
     },
@@ -123,8 +106,8 @@ export default {
       this.$nextTick().then(this.calculateMaxGraphElements);
     },
 
-    tickers() {
-      localStorage.setItem("cryptonomicon-list", JSON.stringify(this.tickers));
+    tickers(value) {
+      localStorage.setItem("cryptonomicon-list", JSON.stringify(value));
     },
   },
 
@@ -143,9 +126,9 @@ export default {
         .filter((t) => t.name === tickerName)
         .forEach((t) => {
           if (t === this.selectedTicker) {
-            this.graph.push(price);
-            if (this.graph.length > this.maxGraphElements) {
-              this.graph = this.graph.slice(1, this.maxGraphElements);
+            t.graph.push(price);
+            if (t.graph.length > this.maxGraphElements) {
+              t.graph = t.graph.slice(1, this.maxGraphElements);
             }
           }
           t.price = price;
@@ -156,9 +139,10 @@ export default {
       const currentTicker = {
         name: ticker.toUpperCase(),
         price: "-",
+        graph: []
       };
 
-      this.tickerExistsFunc(currentTicker.name);
+      this.tickerExists = tickerExistsFunc(currentTicker.name, this.tickers);
       if (this.tickerExists || currentTicker.name == "") {
         return;
       }
@@ -174,29 +158,29 @@ export default {
       this.selectedTicker = ticker;
     },
 
-    handleDelete(tickerToRemove) {
-      this.tickers = this.tickers.filter((t) => t !== tickerToRemove);
-      const cryptList = JSON.parse(localStorage.getItem("cryptonomicon-list"));
-      localStorage.setItem(
-        "cryptonomicon-list",
-        JSON.stringify(cryptList.filter((i) => i.name !== tickerToRemove.name)),
-      );
+    // handleDelete(tickerToRemove) {
+    //   this.tickers = this.tickers.filter((t) => t !== tickerToRemove);
+    //   const cryptList = JSON.parse(localStorage.getItem("cryptonomicon-list"));
+    //   localStorage.setItem(
+    //     "cryptonomicon-list",
+    //     JSON.stringify(cryptList.filter((i) => i.name !== tickerToRemove.name)),
+    //   );
 
-      if (this.selectedTicker === tickerToRemove) {
-        this.selectedTicker = null;
-      }
-      unsubscribeFromTicker(tickerToRemove.name);
-    },
+    //   if (this.selectedTicker === tickerToRemove) {
+    //     this.selectedTicker = null;
+    //   }
+    //   unsubscribeFromTicker(tickerToRemove.name);
+    // },
 
-    tickerExistsFunc(currentTickerName) {
-      for (let i of this.tickers) {
-        if (i.name === currentTickerName.toUpperCase()) {
-          this.tickerExists = true;
-          return;
-        }
-      }
-      this.tickerExists = false;
-    },
+    // tickerExistsFunc(currentTickerName) {
+    //   for (let i of this.tickers) {
+    //     if (i.name === currentTickerName.toUpperCase()) {
+    //       this.tickerExists = true;
+    //       return;
+    //     }
+    //   }
+    //   this.tickerExists = false;
+    // },
   },
 };
 </script>
